@@ -1,6 +1,9 @@
 # 本機連真的 Firebase 測試用的設定，不進 git
 site/firebase-config.local.js
 
+# 本機的開發交接紀錄（含本機路徑），不公開
+HANDOFF.md
+
 # Firebase CLI 的暫存
 .firebase/
 firebase-debug.log

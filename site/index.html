@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>街角郵局</title>
+  <meta name="description" content="寄一張明信片給路過的人。GitHub Pages ＋ Firebase（Firestore、Google 登入）的免費架站範例。">
+  <meta name="theme-color" content="#b8341f">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body data-mode="loading">
+  <div class="shell">
+    <aside class="rail" aria-label="郵局招牌">
+      <span class="rail__slot" aria-hidden="true"></span>
+      <h1 class="rail__title">街角郵局</h1>
+      <p class="rail__motto">寄一張明信片，給路過的人</p>
+      <p class="rail__status"><span class="rail__lamp" aria-hidden="true"></span><span id="mode-label">開門中…</span></p>
+    </aside>
+
+    <main class="counter">
+      <header class="counter__top">
+        <p class="counter__hours"><span>營業時間</span> 00:00–24:00 <span aria-hidden="true">·</span> 免郵資</p>
+        <div class="account" id="account"></div>
+      </header>
+
+      <div class="notice" id="notice" hidden>
+        <span class="notice__mark" aria-hidden="true">樣張</span>
+        <p><strong>示範模式</strong>：還沒接上 Firebase，資料只存在這個瀏覽器，換台電腦就看不到。照 README 設定 Firebase 並部署後，這裡就是真的郵局。</p>
+      </div>
+
+      <section class="desk" aria-labelledby="desk-title">
+        <h2 class="section-title" id="desk-title">寫一張</h2>
+        <form class="postcard postcard--blank" id="compose" autocomplete="off">
+          <div class="postcard__message">
+            <label class="visually-hidden" for="compose-text">明信片內容</label>
+            <textarea id="compose-text" name="text" rows="6" maxlength="600" aria-describedby="compose-zip-spoken compose-hint" placeholder="寫點什麼給路過的人……"></textarea>
+            <div class="zip" id="compose-zip">
+              <span id="compose-zip-label">還能寫</span>
+              <span class="zip__boxes" id="compose-zip-boxes" aria-hidden="true"></span>
+              <span>字</span>
+              <span class="visually-hidden" id="compose-zip-spoken"></span>
+            </div>
+            <p class="visually-hidden" id="compose-alert" role="status"></p>
+          </div>
+
+          <div class="postcard__address">
+            <div class="postcard__corner stamp-slot" id="compose-stamp"></div>
+
+            <fieldset class="stamp-picker" id="stamp-picker" disabled>
+              <legend>選郵票</legend>
+              <label class="stamp-choice">
+                <input type="radio" name="stamp" value="vermilion">
+                <span class="stamp-choice__chip" data-stamp="vermilion" aria-hidden="true">5</span>
+                <span class="stamp-choice__name">朱紅</span>
+              </label>
+              <label class="stamp-choice">
+                <input type="radio" name="stamp" value="indigo">
+                <span class="stamp-choice__chip" data-stamp="indigo" aria-hidden="true">10</span>
+                <span class="stamp-choice__name">靛藍</span>
+              </label>
+              <label class="stamp-choice">
+                <input type="radio" name="stamp" value="moss">
+                <span class="stamp-choice__chip" data-stamp="moss" aria-hidden="true">20</span>
+                <span class="stamp-choice__name">苔綠</span>
+              </label>
+            </fieldset>
+
+            <dl class="postcard__lines">
+              <div class="postcard__line"><dt>寄件人</dt><dd id="compose-sender">尚未登記</dd></div>
+            </dl>
+
+            <div class="desk__actions">
+              <button type="button" class="btn btn--quiet" id="to-drawer" data-write>放進抽屜</button>
+              <button type="submit" class="btn btn--stamp" id="send" data-write>寄出</button>
+            </div>
+            <p class="desk__hint" id="compose-hint">Ctrl＋Enter 也能寄出。寄出後不能修改，只能撤回。</p>
+          </div>
+
+          <div class="desk__locked" id="desk-locked" hidden>
+            <p class="desk__locked-title">先登記寄件人</p>
+            <p>用 Google 帳號登入後才能寄信。寄件人的名字和頭像會照 Google 帳號印上去，別人冒用不了。</p>
+            <p>在共用電腦上請用無痕視窗：登出後，瀏覽器裡仍可能留著讀過的資料。</p>
+            <button type="button" class="btn btn--ink" id="desk-sign-in">用 Google 帳號登記</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="drawer" id="drawer" aria-labelledby="drawer-title" hidden>
+        <span class="drawer__pull" aria-hidden="true"></span>
+        <h2 class="drawer__title" id="drawer-title">我的抽屜 <span class="drawer__note">只有你看得到</span></h2>
+        <ol class="drawer__letters" id="letters"></ol>
+        <p class="drawer__empty" id="drawer-empty">抽屜是空的。寫好還不想寄的，可以先收在這裡。</p>
+      </section>
+
+      <section class="wall" aria-labelledby="wall-title">
+        <div class="wall__head">
+          <h2 class="section-title" id="wall-title">公佈牆</h2>
+          <p class="zip zip--quiet"><span aria-hidden="true">牆上</span> <span class="zip__boxes" id="wall-count" aria-hidden="true"></span> <span aria-hidden="true">張</span><span class="visually-hidden" id="wall-count-spoken">公佈牆載入中</span></p>
+        </div>
+        <p class="visually-hidden" id="wall-status" role="status"></p>
+        <ol class="wall__grid" id="wall"></ol>
+        <p class="wall__empty" id="wall-empty" hidden>牆上還空空的，寄第一張吧。</p>
+      </section>
+
+      <section class="route" aria-labelledby="route-title">
+        <h2 class="section-title" id="route-title">一張明信片怎麼上牆</h2>
+        <ol class="route__steps">
+          <li class="route__step">
+            <span class="route__no" aria-hidden="true">1</span>
+            <h3>寫好明信片</h3>
+            <p>這個頁面是放在 GitHub Pages 的靜態檔案，郵局本身沒有伺服器。</p>
+          </li>
+          <li class="route__step">
+            <span class="route__no" aria-hidden="true">2</span>
+            <h3>登記寄件人</h3>
+            <p>用 Google 登入（Firebase Authentication），郵局才知道是誰寄的。</p>
+          </li>
+          <li class="route__step">
+            <span class="route__no" aria-hidden="true">3</span>
+            <h3>郵局驗信</h3>
+            <p>Firestore Security Rules 檢查：是本人、140 字以內、名字頭像沒有冒用、和上一封至少隔 10 秒。</p>
+          </li>
+          <li class="route__step">
+            <span class="route__no" aria-hidden="true">4</span>
+            <h3>貼上公佈牆</h3>
+            <p>通過就寫進 Firestore，每個人的頁面即時更新。抽屜裡的信，規則只讓主人讀。</p>
+          </li>
+        </ol>
+      </section>
+
+      <footer class="colophon">
+        <p>街角郵局是 GitHub Pages ＋ Firebase Spark（免費方案）的範例專案。牆上只顯示最新 40 張。</p>
+      </footer>
+    </main>
+  </div>
+
+  <div class="slips" id="slips"></div>
+  <noscript><p class="noscript">街角郵局需要 JavaScript 才能營業。</p></noscript>
+</body>
+</html>

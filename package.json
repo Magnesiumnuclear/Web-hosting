@@ -1,0 +1,14 @@
+{
+  "name": "street-postoffice",
+  "private": true,
+  "description": "GitHub Pages + Firebase Spark 範例：只有規則測試用到 npm，網站本身不需要建置",
+  "type": "module",
+  "scripts": {
+    "test:rules": "node tests/run-rules-tests.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.34.0"
+  }
+}

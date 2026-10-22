@@ -1,0 +1,80 @@
+# push 到 main 就把 site/ 部署到 GitHub Pages。
+# Firebase 設定取自 repository variables（Settings → Secrets and variables → Actions → Variables），
+# 在部署時寫進 site/firebase-config.js，repo 裡不放任何金鑰。沒設定變數時以示範模式部署。
+# 第三方 action 都釘在 commit SHA，避免標籤被改指到別的程式碼；註解是對應的版本。
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Write Firebase web config
+        env:
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+        run: |
+          set -euo pipefail
+          names=(FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID FIREBASE_APP_ID)
+          missing=()
+          for name in "${names[@]}"; do
+            [ -n "${!name:-}" ] || missing+=("$name")
+          done
+          if [ "${#missing[@]}" -eq "${#names[@]}" ]; then
+            echo "::warning title=Firebase 尚未設定::找不到 FIREBASE_* repository variables，網站以示範模式部署。設定方式見 README。"
+            exit 0
+          fi
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error title=Firebase 設定不完整::缺少 ${missing[*]}"
+            exit 1
+          fi
+          # 用 jq 組 JSON，變數值裡有引號或換行也不會變成程式碼
+          jq -n \
+            --arg apiKey "$FIREBASE_API_KEY" \
+            --arg authDomain "$FIREBASE_AUTH_DOMAIN" \
+            --arg projectId "$FIREBASE_PROJECT_ID" \
+            --arg appId "$FIREBASE_APP_ID" \
+            '{apiKey: $apiKey, authDomain: $authDomain, projectId: $projectId, appId: $appId}' \
+            > "$RUNNER_TEMP/firebase-config.json"
+          {
+            echo '// 由 .github/workflows/deploy-pages.yml 產生'
+            printf 'export const firebaseConfig = %s;\n' "$(cat "$RUNNER_TEMP/firebase-config.json")"
+          } > site/firebase-config.js
+          echo "已寫入 Firebase 設定（projectId: $FIREBASE_PROJECT_ID）"
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

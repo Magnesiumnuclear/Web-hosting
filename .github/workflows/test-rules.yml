@@ -1,0 +1,68 @@
+# 規則或前後端共用的限制有變動時，在 GitHub 的 Ubuntu 機器上跑 Firestore emulator 規則測試（npm run test:rules）。
+# 和部署分開：測試失敗不會擋住網站部署。第三方 action 都釘在 commit SHA，註解是對應的版本。
+name: Test Firestore rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - firestore.rules
+      - firebase.json
+      - package.json
+      - package-lock.json
+      - 'tests/**'
+      - site/js/shared.js
+      - .github/workflows/test-rules.yml
+  pull_request:
+    paths:
+      - firestore.rules
+      - firebase.json
+      - package.json
+      - package-lock.json
+      - 'tests/**'
+      - site/js/shared.js
+      - .github/workflows/test-rules.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-rules-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # 寫死修補版：只寫 22 可能用到 runner 預裝的舊版（2026-10-21 的安全更新修在 22.23.4）
+          node-version: '22.23.4'
+          package-manager-cache: false
+
+      - name: Set up Java for the Firestore emulator
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # emulator JAR 約 137 MB；firebase-tools 版本（lockfile）變了才換快取
+      - name: Cache Firestore emulator
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install test dependencies
+        run: npm ci --ignore-scripts --omit=optional
+
+      - name: Run rules tests
+        run: npm run test:rules

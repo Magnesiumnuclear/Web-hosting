@@ -1,0 +1,94 @@
+rules_version = '2';
+
+// 街角郵局的 Firestore Security Rules
+// 沒有被下面任何 allow 允許的讀寫一律拒絕（Firestore 預設就是全部拒絕）。
+// 數字（140 字、8 行、10 秒、50 / 100 筆）要和 site/js/shared.js 一致；改完跑 npm run test:rules。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 只接受 Google 登入。之後就算在 Firebase 開了匿名登入，匿名帳號也不能寄信。
+    function isGoogleUser() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function isUser(uid) {
+      return isGoogleUser() && request.auth.uid == uid;
+    }
+
+    // 1–140 個字（size() 以 UTF-16 單位計算，emoji 多半算 2）、不能全是空白、最多 8 行
+    function validText(text) {
+      return text is string
+        && text.size() <= 140
+        && text.trim().size() > 0
+        && text.split('\n').size() <= 8;
+    }
+
+    // 寄件冷卻：同一個批次裡必須把 /rate/{uid} 寫成「這次的時間＋這次新增的那一份文件」。
+    // 一個批次只能指向一份文件，所以不能把多張明信片塞進同一個批次繞過冷卻；
+    // /rate 的 update 規則再保證兩次寫入至少相隔 10 秒。
+    function stampedRate(kind, docId) {
+      let rate = getAfter(/databases/$(database)/documents/rate/$(request.auth.uid)).data;
+      return rate.last == request.time
+        && rate.kind == kind
+        && rate.docId == docId;
+    }
+
+    // 公佈牆：所有人都能讀，只有寄件人能撤回，寄出後不能修改
+    match /postcards/{cardId} {
+      allow get: if true;
+      // 一次最多讀 50 張，避免有人一口氣把整個集合讀光、吃掉每日讀取額度
+      allow list: if request.query.limit <= 50;
+
+      allow create: if isGoogleUser()
+        && request.resource.data.keys().hasOnly(['text', 'stamp', 'authorId', 'authorName', 'authorPhoto', 'createdAt'])
+        && request.resource.data.keys().hasAll(['text', 'stamp', 'authorId', 'authorName', 'authorPhoto', 'createdAt'])
+        && validText(request.resource.data.text)
+        && request.resource.data.stamp in ['vermilion', 'indigo', 'moss']
+        && request.resource.data.authorId == request.auth.uid
+        // 名字和頭像要和 Google 登入資料一致，不能冒用別人的名字
+        && request.resource.data.authorName == request.auth.token.get('name', '')
+        && request.resource.data.authorPhoto == request.auth.token.get('picture', '')
+        && request.resource.data.createdAt == request.time
+        && stampedRate('postcards', cardId);
+
+      allow update: if false;
+      allow delete: if isGoogleUser() && resource.data.authorId == request.auth.uid;
+    }
+
+    // 抽屜：只有抽屜主人能讀寫
+    match /drawers/{uid}/letters/{letterId} {
+      allow get: if isUser(uid);
+      allow list: if isUser(uid) && request.query.limit <= 100;
+
+      allow create: if isUser(uid)
+        && request.resource.data.keys().hasOnly(['text', 'createdAt'])
+        && request.resource.data.keys().hasAll(['text', 'createdAt'])
+        && validText(request.resource.data.text)
+        && request.resource.data.createdAt == request.time
+        && stampedRate('letters', letterId);
+
+      allow update: if false;
+      allow delete: if isUser(uid);
+    }
+
+    // 寄件紀錄：每人一份，記最後一次新增的時間與目標文件
+    match /rate/{uid} {
+      function validRate() {
+        return request.resource.data.keys().hasOnly(['last', 'kind', 'docId'])
+          && request.resource.data.keys().hasAll(['last', 'kind', 'docId'])
+          && request.resource.data.last == request.time
+          && request.resource.data.kind in ['postcards', 'letters']
+          && request.resource.data.docId is string
+          && request.resource.data.docId.size() <= 40;
+      }
+
+      allow get: if isUser(uid);
+      allow create: if isUser(uid) && validRate();
+      allow update: if isUser(uid)
+        && validRate()
+        && request.time > resource.data.last + duration.value(10, 's');
+      allow delete: if false;
+    }
+  }
+}
