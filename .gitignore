@@ -1,0 +1,11 @@
+# 本機連真的 Firebase 測試用的設定，不進 git
+site/firebase-config.local.js
+
+# Firebase CLI 的暫存
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+node_modules/
+.DS_Store
+Thumbs.db
