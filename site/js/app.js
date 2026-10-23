@@ -159,7 +159,7 @@ function openRegister() {
   els.registerNo.textContent = String(crypto.getRandomValues(new Uint16Array(1))[0] % 10000).padStart(4, '0');
   els.registerDate.textContent = formatDateTime(new Date()).split(' ')[0];
   els.registerName.replaceChildren(
-    Object.assign(document.createElement('span'), { className: 'register__blank', textContent: '（由 Google 帳號帶入）' }),
+    Object.assign(document.createElement('span'), { className: 'register__blank', textContent: '（登記後自動帶入）' }),
   );
   els.registerSeal.replaceChildren(
     Object.assign(document.createElement('span'), { className: 'stamp-slot__empty', textContent: '貼郵票處' }),

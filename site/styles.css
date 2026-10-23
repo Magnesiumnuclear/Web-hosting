@@ -1152,6 +1152,7 @@ body {
 
 .register__blank {
   font: 400 0.78rem/1.5 var(--font-sans);
+  white-space: nowrap;
   color: var(--rule-strong);
 }
 
