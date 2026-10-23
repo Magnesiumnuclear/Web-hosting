@@ -84,8 +84,7 @@
           <div class="desk__locked" id="desk-locked" hidden>
             <p class="desk__locked-title">先登記寄件人</p>
             <p>用 Google 帳號登入後才能寄信。寄件人的名字和頭像會照 Google 帳號印上去，別人冒用不了。</p>
-            <p>在共用電腦上請用無痕視窗：登出後，瀏覽器裡仍可能留著讀過的資料。</p>
-            <button type="button" class="btn btn--ink" id="desk-sign-in">用 Google 帳號登記</button>
+            <button type="button" class="btn btn--ink" id="desk-sign-in">到櫃台登記寄件人</button>
           </div>
         </form>
       </section>
@@ -138,6 +137,35 @@
       </footer>
     </main>
   </div>
+
+  <dialog class="register" id="register" aria-labelledby="register-title" aria-describedby="register-lead" data-phase="idle">
+    <form method="dialog" class="register__form">
+      <p class="register__serial" aria-hidden="true">REGISTRATION · 寄件人登記單 · No. <span id="register-no">0000</span></p>
+      <h2 class="register__title" id="register-title">寄件人登記</h2>
+      <p class="register__lead" id="register-lead">櫃台需要看一下你的 Google 帳號。登記好後，你的名字和頭像會印成郵票，貼在每一張寄出的明信片上，別人冒用不了。</p>
+
+      <div class="register__body">
+        <dl class="register__lines">
+          <div class="register__line"><dt>姓名</dt><dd id="register-name"><span class="register__blank">（由 Google 帳號帶入）</span></dd></div>
+          <div class="register__line"><dt>證件</dt><dd>Google 帳號</dd></div>
+          <div class="register__line"><dt>登記日</dt><dd id="register-date"></dd></div>
+        </dl>
+        <div class="register__seal" id="register-seal">
+          <span class="stamp-slot__empty">貼郵票處</span>
+        </div>
+      </div>
+
+      <p class="register__status" id="register-status" role="status"></p>
+      <p class="register__fine" id="register-fine">在共用電腦上請用無痕視窗：登出後，瀏覽器裡仍可能留著讀過的資料。</p>
+
+      <div class="register__actions">
+        <button type="submit" class="btn btn--quiet" value="cancel" id="register-cancel">改天再說</button>
+        <button type="button" class="btn btn--ink" id="register-go" autofocus>出示 Google 帳號</button>
+        <button type="submit" class="btn btn--stamp" value="done" id="register-done" hidden>開始寫信</button>
+      </div>
+      <span class="register__approved" id="register-approved" aria-hidden="true" hidden>登記完成</span>
+    </form>
+  </dialog>
 
   <div class="slips" id="slips"></div>
   <noscript><p class="noscript">街角郵局需要 JavaScript 才能營業。</p></noscript>

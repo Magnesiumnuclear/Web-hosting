@@ -1,5 +1,5 @@
 import { MAX_CHARS, MAX_LINES, COOLDOWN_MS, DRAWER_LIMIT, STAMPS, charCount, checkText, isStamp } from './shared.js';
-import { renderPostcard, renderStamp, formatDateTime } from './postcard.js';
+import { renderPostcard, renderStamp, renderPostmark, formatDateTime } from './postcard.js';
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -30,6 +30,17 @@ const els = {
   wallCountSpoken: $('#wall-count-spoken'),
   wallStatus: $('#wall-status'),
   slips: $('#slips'),
+  register: $('#register'),
+  registerNo: $('#register-no'),
+  registerName: $('#register-name'),
+  registerDate: $('#register-date'),
+  registerSeal: $('#register-seal'),
+  registerStatus: $('#register-status'),
+  registerFine: $('#register-fine'),
+  registerCancel: $('#register-cancel'),
+  registerGo: $('#register-go'),
+  registerDone: $('#register-done'),
+  registerApproved: $('#register-approved'),
 };
 
 const state = {
@@ -124,6 +135,7 @@ function onUser(user) {
   state.letters = [];
   els.drawer.hidden = !user;
   if (user) state.stopDrawer = state.store.watchDrawer(onLetters, (e) => reportError(e, 'read'));
+  if (user && els.register.open && els.register.dataset.phase === 'checking') approveRegister(user);
   renderAccount();
   renderComposeIdentity();
   renderLetters();
@@ -133,20 +145,91 @@ function onUser(user) {
 // LINE、Facebook、Instagram 的內建瀏覽器不允許 Google 登入（Google 會回 disallowed_useragent）
 const IN_APP_BROWSER = /\bLine\/|FBAN|FBAV|Instagram/i;
 
-async function signIn() {
+// ── 寄件人登記單 ─────────────────────────────────────
+// 先在郵局櫃台填登記單，按「出示 Google 帳號」才開 Google 的登入視窗；
+// 登入成功後把頭像印成郵票貼上、蓋郵戳，再回到寫信桌。
+
+function openRegister() {
+  if (state.user || !state.store || els.register.open) return;
+  setRegisterPhase('idle');
+  els.registerNo.textContent = String(crypto.getRandomValues(new Uint16Array(1))[0] % 10000).padStart(4, '0');
+  els.registerDate.textContent = formatDateTime(new Date()).split(' ')[0];
+  els.registerName.replaceChildren(
+    Object.assign(document.createElement('span'), { className: 'register__blank', textContent: '（由 Google 帳號帶入）' }),
+  );
+  els.registerSeal.replaceChildren(
+    Object.assign(document.createElement('span'), { className: 'stamp-slot__empty', textContent: '貼郵票處' }),
+  );
+  els.registerFine.textContent =
+    state.store.mode === 'demo'
+      ? '示範模式不會連到 Google，按下去就直接登記成示範寄件人。'
+      : '在共用電腦上請用無痕視窗：登出後，瀏覽器裡仍可能留著讀過的資料。';
+  els.register.showModal();
+}
+
+function setRegisterPhase(phase, status = '') {
+  els.register.dataset.phase = phase;
+  els.registerStatus.textContent = status;
+  els.registerGo.hidden = phase === 'approved';
+  els.registerGo.disabled = phase === 'checking';
+  els.registerGo.textContent = phase === 'checking' ? '查驗中…' : '出示 Google 帳號';
+  els.registerCancel.hidden = phase === 'approved';
+  els.registerDone.hidden = phase !== 'approved';
+  els.registerApproved.hidden = phase !== 'approved';
+}
+
+// signInWithPopup 要在點擊的同一個事件裡呼叫，彈出視窗才不會被擋，所以呼叫前不能 await
+async function presentId() {
   if (IN_APP_BROWSER.test(navigator.userAgent)) {
-    showSlip({
-      kind: 'info',
-      title: '請用一般瀏覽器開啟',
-      body: 'LINE、Facebook 的內建瀏覽器不能用 Google 登入。請點右上角選單，改用 Chrome 或 Safari 開啟。',
-    });
+    setRegisterPhase(
+      'idle',
+      'LINE、Facebook 的內建瀏覽器不能用 Google 登入。請點右上角選單，改用 Chrome 或 Safari 開啟。',
+    );
     return;
   }
+  setRegisterPhase('checking', '請在 Google 的視窗選擇帳號，櫃台查驗中……');
   try {
     await state.store.signIn();
   } catch (e) {
-    reportError(e);
+    if (!els.register.open) {
+      reportError(e);
+      return;
+    }
+    if (e?.code === 'cancelled') {
+      setRegisterPhase('idle', '沒關係，準備好再出示一次。');
+      return;
+    }
+    console.error(e);
+    const { title, body } = messageFor(e);
+    setRegisterPhase('idle', `${title}：${body}`);
   }
+}
+
+function approveRegister(user) {
+  const name = user.name || '無名寄件人';
+  const ink = document.createElement('span');
+  ink.className = 'register__ink';
+  ink.textContent = name;
+  els.registerName.replaceChildren(ink);
+  els.registerSeal.replaceChildren(
+    renderStamp({ stamp: state.stamp, name: user.name, photo: user.photo, specimen: state.store.mode === 'demo' }),
+    renderPostmark(new Date()),
+  );
+  setRegisterPhase('approved', `登記完成。歡迎，${name}。`);
+  els.registerDone.focus();
+}
+
+function closedRegister() {
+  const approved = els.register.dataset.phase === 'approved';
+  setRegisterPhase('idle');
+  if (!approved || !state.user) return;
+  // 剛印好的郵票貼到寫信桌上
+  const slot = els.stampSlot;
+  slot.classList.remove('is-arriving');
+  void slot.offsetWidth;
+  slot.classList.add('is-arriving');
+  slot.addEventListener('animationend', () => slot.classList.remove('is-arriving'), { once: true });
+  els.text.focus();
 }
 
 async function signOut() {
@@ -162,7 +245,7 @@ function renderAccount() {
   box.replaceChildren();
   if (!state.store) return;
   if (!state.user) {
-    box.append(makeButton('btn btn--ink', '用 Google 帳號登記寄件人', signIn));
+    box.append(makeButton('btn btn--ink', '登記寄件人', openRegister));
     return;
   }
   const who = document.createElement('span');
@@ -193,7 +276,9 @@ function wireCompose() {
     sendCompose();
   });
   els.toDrawer.addEventListener('click', saveCompose);
-  els.lockedSignIn.addEventListener('click', signIn);
+  els.lockedSignIn.addEventListener('click', openRegister);
+  els.registerGo.addEventListener('click', presentId);
+  els.register.addEventListener('close', closedRegister);
   for (const radio of els.form.elements.stamp) {
     radio.checked = radio.value === state.stamp;
     radio.addEventListener('change', () => {

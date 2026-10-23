@@ -1055,6 +1055,198 @@ body {
   color: var(--paper);
 }
 
+/* ── 寄件人登記單 ─────────────────────────────────── */
+
+.register {
+  width: min(31rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow), 0 30px 60px -20px rgb(0 0 0 / 0.45);
+  overflow: visible;
+}
+
+.register[open] {
+  animation: slide-up 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+.register::backdrop {
+  background: rgb(20 14 6 / 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.register__form {
+  position: relative;
+  max-height: calc(100dvh - 2rem);
+  padding: 1.9rem 1.5rem 1.3rem;
+  overflow: hidden auto;
+  /* 上緣的紅藍斜紋，和寫信桌同一套 */
+  border-top: 7px solid transparent;
+  border-image: repeating-linear-gradient(135deg, var(--vermilion) 0 12px, var(--card) 12px 22px, var(--indigo) 22px 34px, var(--card) 34px 44px) 7;
+}
+
+.register__serial {
+  position: absolute;
+  top: 0.55rem;
+  left: 50%;
+  translate: -50% 0;
+  margin: 0;
+  font: 600 0.58rem/1 var(--font-mono);
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+  color: var(--rule-strong);
+}
+
+.register__title {
+  margin: 0.4rem 0 0.5rem;
+  font: 900 1.45rem/1.4 var(--font-serif);
+  letter-spacing: 0.3em;
+}
+
+.register__lead {
+  margin: 0 0 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: var(--ink-soft);
+}
+
+.register__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.2rem;
+  align-items: end;
+}
+
+.register__lines {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.register__line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.register__line dt {
+  flex: none;
+  width: 3.6em;
+  font: 500 0.7rem/1 var(--font-sans);
+  white-space: nowrap;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+}
+
+.register__line dd {
+  margin: 0;
+  min-width: 0;
+  font: 400 1.05rem/1.5 var(--font-hand);
+  overflow-wrap: anywhere;
+}
+
+.register__blank {
+  font: 400 0.78rem/1.5 var(--font-sans);
+  color: var(--rule-strong);
+}
+
+/* 名字像用鋼筆一筆寫上去 */
+.register__ink {
+  display: inline-block;
+  font-size: 1.25rem;
+  animation: write-in 0.9s steps(14, end) 0.15s both;
+}
+
+.register__seal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 6.5rem;
+  min-height: 6.4rem;
+}
+
+.register__seal .stamp {
+  animation: stick 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) 0.5s both;
+}
+
+.register__seal .postmark {
+  top: 2.6rem;
+  right: -1rem;
+  width: 7.4rem;
+  animation: thump 0.4s 1s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+.register__status {
+  min-height: 1.6em;
+  margin: 1.1rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.register[data-phase="checking"] .register__status::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--vermilion);
+  vertical-align: 0.08em;
+  animation: blink 1s ease-in-out infinite;
+}
+
+.register[data-phase="approved"] .register__fine {
+  display: none;
+}
+
+.register[data-phase="approved"] .register__status {
+  color: var(--moss);
+  font-weight: 500;
+}
+
+.register__fine {
+  margin: 0.3rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.register__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.8rem 1.2rem;
+  margin-top: 1.2rem;
+}
+
+.register__approved {
+  position: absolute;
+  top: 1.75rem;
+  right: 1.3rem;
+  padding: 0.2rem 0.15rem 0.2rem 0.55rem;
+  border: 3px double currentColor;
+  border-radius: 4px;
+  color: var(--vermilion-ink);
+  font: 900 1.1rem/1.2 var(--font-serif);
+  letter-spacing: 0.4em;
+  opacity: 0.85;
+  pointer-events: none;
+  --rot: -12deg;
+  transform: rotate(var(--rot));
+  animation: press 0.4s 1.3s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+/* 登記完成後，郵票貼到寫信桌上 */
+.stamp-slot.is-arriving .stamp {
+  animation: stick 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
 /* ── 退件單（通知） ───────────────────────────────── */
 
 .slips {
@@ -1154,6 +1346,44 @@ body {
   from {
     opacity: 0;
     transform: translateY(10px);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px) rotate(-1deg);
+  }
+}
+
+@keyframes write-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes stick {
+  from {
+    opacity: 0;
+    transform: translateY(-22px) rotate(-10deg) scale(1.15);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes press {
+  from {
+    opacity: 0;
+    transform: rotate(var(--rot)) scale(1.8);
+  }
+  to {
+    opacity: 0.85;
+    transform: rotate(var(--rot)) scale(1);
   }
 }
 
