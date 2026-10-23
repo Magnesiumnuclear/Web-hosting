@@ -4,7 +4,7 @@
 
 - **固定網址**：`https://<你的帳號>.github.io/<repo 名稱>/`
 - **後端資料庫**：Cloud Firestore（即時更新）
-- **登入**：Firebase Authentication 的 Google 登入
+- **登入**：Firebase Authentication 的 Google 登入，可選用 Google One Tap
 - **權限**：全部寫在 [`firestore.rules`](firestore.rules)，前端沒有任何密鑰
 - **部署**：push 到 `main`，GitHub Actions 自動發布
 - **網站不需要 npm、不需要建置**：純 HTML / CSS / JavaScript，Firebase SDK 從 Google 官方 CDN 載入
@@ -14,11 +14,16 @@
 
 ```
 瀏覽器（GitHub Pages 的靜態檔案）
-   │  Google 登入
-   ├──────────────► Firebase Authentication
+   │  寄件人登記單：出示 Google 帳號
+   │    ├─ 有設定 googleClientId：Google One Tap 帳號面板（site/js/one-tap.js）
+   │    │    └─ 拿到 Google ID token，用 signInWithCredential 登入
+   │    └─ 沒設定，或面板沒出現／被關掉：Google 登入彈出視窗（signInWithPopup）
+   ├──────────────► Firebase Authentication（兩條路的 sign_in_provider 都是 google.com）
    │  讀寫資料（帶著登入身分）
    └──────────────► Cloud Firestore ── Security Rules 決定放不放行
 ```
+
+One Tap 是選用的，設定方式見[第 5 節](#5-選用google-one-tap-登入)；沒設定時只有彈出視窗這條路。
 
 ## 網站有什麼
 
