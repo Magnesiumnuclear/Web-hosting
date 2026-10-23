@@ -72,7 +72,6 @@ export function createFirebaseStore(config) {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   });
   const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
   const oneTap = config.googleClientId ? createOneTap(config.googleClientId) : null;
 
   let me = null;
