@@ -90,6 +90,18 @@ Firebase 的 `apiKey` 是公開的識別碼，不是密碼，放在網站上是�
 - `https://<projectId>.firebaseapp.com/*`（Google 登入的彈出視窗會用到）
 - `http://localhost:8000/*`（本機測試用，不需要可以不加）
 
+## 5. 選用：Google One Tap 登入
+
+預設登入會開 Google 的彈出視窗，手機上會切到 `accounts.google.com` 的分頁。設定 One Tap 後，支援 FedCM 的瀏覽器（例如 Android 的 Chrome）改成從畫面下方滑出系統的帳號面板，不用離開網站；面板沒出現或被關掉時，登記單會改用原本的彈出視窗。iPhone 和其他瀏覽器照舊用彈出視窗。
+
+1. Firebase Console → **Authentication → Sign-in method → Google** → 展開 **網頁 SDK 設定**，複製 **網頁用戶端 ID**（像 `123…-xxx.apps.googleusercontent.com`）。
+2. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → 選同一個專案 → 憑證 → **OAuth 2.0 用戶端 ID** 裡的 **Web client (auto created by Google Service)** → **已授權的 JavaScript 來源** 加入 `https://<你的帳號>.github.io`（本機測試再加 `http://localhost` 和 `http://localhost:8000`）→ 儲存。生效可能要幾分鐘。
+3. GitHub repo 的 **Settings → Secrets and variables → Actions → Variables** 新增 `FIREBASE_GOOGLE_CLIENT_ID`，值是第 1 點的用戶端 ID，然後重跑 `Deploy to GitHub Pages`。
+
+不設定這個變數就維持彈出視窗。本機測試要用 One Tap，在 `firebase-config.local.js` 加上 `googleClientId: '...'`。
+
+One Tap 拿到的 Google ID token 會用 `signInWithCredential` 換成 Firebase 登入，`sign_in_provider` 一樣是 `google.com`，`name`、`picture` 也一樣，規則不用改。使用者關掉面板後，Chrome 會有一段冷卻時間不再顯示面板，這段時間會直接改用彈出視窗。
+
 ## Security Rules 做了什麼
 
 | 規則 | 擋下什麼 |
@@ -198,6 +210,7 @@ site/
   firebase-config.js                預設 null＝示範模式；部署時被覆寫
   js/app.js                         畫面與互動
   js/firebase-store.js              Firebase 版的資料層（Auth＋Firestore）
+  js/one-tap.js                     Google One Tap（有設定 googleClientId 才會載入 Google 的程式）
   js/demo-store.js                  示範模式的資料層（localStorage，照規則檢查）
   js/postcard.js                    明信片、郵票、郵戳的 DOM
   js/shared.js                      和規則共用的限制
@@ -216,11 +229,14 @@ site/
 | Pages 網址 404 | Settings → Pages 的 Source 要選 GitHub Actions，並確認 workflow 跑成功 |
 | 部署後還是「示範模式」 | 4 個 `FIREBASE_*` 要建在 **Variables** 分頁，不是 Secrets；也要是 repository 層級，不是 `github-pages` 這個 environment 底下的變數。建完重跑 workflow |
 | 手動執行 workflow 時 deploy 被擋 | `github-pages` environment 預設只允許從 `main` 部署，Run workflow 時分支要選 `main` |
+| 按了登記，Google 面板一直沒出現 | `FIREBASE_GOOGLE_CLIENT_ID` 的 OAuth client 沒把網站加進「已授權的 JavaScript 來源」，或剛加還沒生效；可以先按「改用 Google 視窗」 |
+| One Tap 選完帳號後顯示 Firebase 設定有誤 | `FIREBASE_GOOGLE_CLIENT_ID` 不是這個 Firebase 專案的網頁用戶端 ID |
 | 從 LINE、Facebook 點開無法登入 | 這些 App 的內建瀏覽器不允許 Google 登入，請改用 Chrome 或 Safari 開啟 |
 
 ## 版本
 
 - Firebase JS SDK 12.19.0（`site/js/firebase-store.js` 開頭三行，要一起改）
+- Google Identity Services 從 `https://accounts.google.com/gsi/client` 載入，Google 不提供固定版本
 - `actions/checkout` v7.0.1、`actions/upload-pages-artifact` v5.0.0、`actions/deploy-pages` v5.0.1；規則測試另用 `actions/setup-node` v7.1.0、`actions/setup-java` v6.1.0、`actions/cache` v6.1.0（全部釘在 commit SHA）
 - CI 的 Node 22.23.4、Java Temurin 21
 - 規則測試：`firebase-tools` 15.34.0、`@firebase/rules-unit-testing` 5.0.2、`firebase` 12.19.0。rules-unit-testing 6.x 需要 Node 24.12 以上並搭配 firebase 13，所以停在 5.0.2；lockfile 只收發布滿 7 天的版本。

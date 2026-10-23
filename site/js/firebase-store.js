@@ -5,6 +5,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithPopup,
   signOut as firebaseSignOut,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
@@ -33,6 +34,7 @@ import {
   httpsOnly,
   str,
 } from './shared.js';
+import { createOneTap } from './one-tap.js';
 
 const QUEUE_AFTER_MS = 6000;
 
@@ -52,6 +54,7 @@ const ERROR_CODES = {
   'auth/operation-not-allowed': 'provider-off',
   'auth/configuration-not-found': 'provider-off',
   'auth/invalid-api-key': 'config',
+  'auth/invalid-credential': 'config', // googleClientId 不是這個 Firebase 專案的 OAuth client
 };
 
 function toStoreError(e) {
@@ -70,6 +73,7 @@ export function createFirebaseStore(config) {
   });
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
+  const oneTap = config.googleClientId ? createOneTap(config.googleClientId) : null;
 
   let me = null;
   let lastWriteAt = 0;
@@ -223,6 +227,29 @@ export function createFirebaseStore(config) {
       } catch (e) {
         throw toStoreError(e);
       }
+    },
+
+    // 有設定 googleClientId 才有 One Tap
+    hasOneTap: Boolean(oneTap),
+
+    warmUpSignIn() {
+      oneTap?.warmUp();
+    },
+
+    // 用 One Tap 拿到 Google 的 ID token，再換成 Firebase 登入；
+    // token 的 sign_in_provider 一樣是 google.com，name、picture 也照樣帶過來，規則不用改
+    async signInWithOneTap() {
+      if (!oneTap) throw new StoreError('one-tap-skipped', 'no googleClientId');
+      const idToken = await oneTap.prompt();
+      try {
+        await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+      } catch (e) {
+        throw toStoreError(e);
+      }
+    },
+
+    cancelOneTap() {
+      oneTap?.cancel();
     },
 
     async signOut() {

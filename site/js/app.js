@@ -39,6 +39,7 @@ const els = {
   registerFine: $('#register-fine'),
   registerCancel: $('#register-cancel'),
   registerGo: $('#register-go'),
+  registerPopup: $('#register-popup'),
   registerDone: $('#register-done'),
   registerApproved: $('#register-approved'),
 };
@@ -50,6 +51,7 @@ const state = {
   letters: [],
   busy: false,
   stamp: readPref('stamp', 'vermilion'),
+  oneTapSkipped: false,
   seen: new Set(),
   wallLoaded: false,
   stopDrawer: null,
@@ -151,6 +153,8 @@ const IN_APP_BROWSER = /\bLine\/|FBAN|FBAV|Instagram/i;
 
 function openRegister() {
   if (state.user || !state.store || els.register.open) return;
+  state.oneTapSkipped = false;
+  state.store.warmUpSignIn?.();
   setRegisterPhase('idle');
   els.registerNo.textContent = String(crypto.getRandomValues(new Uint16Array(1))[0] % 10000).padStart(4, '0');
   els.registerDate.textContent = formatDateTime(new Date()).split(' ')[0];
@@ -167,19 +171,23 @@ function openRegister() {
   els.register.showModal();
 }
 
-function setRegisterPhase(phase, status = '') {
+function setRegisterPhase(phase, status = '', { alternative = false } = {}) {
   els.register.dataset.phase = phase;
   els.registerStatus.textContent = status;
   els.registerGo.hidden = phase === 'approved';
   els.registerGo.disabled = phase === 'checking';
-  els.registerGo.textContent = phase === 'checking' ? '查驗中…' : '出示 Google 帳號';
+  els.registerGo.textContent =
+    phase === 'checking' ? '查驗中…' : usesOneTap() || !state.store?.hasOneTap ? '出示 Google 帳號' : '改用 Google 視窗登入';
+  els.registerPopup.hidden = !alternative;
   els.registerCancel.hidden = phase === 'approved';
   els.registerDone.hidden = phase !== 'approved';
   els.registerApproved.hidden = phase !== 'approved';
 }
 
-// signInWithPopup 要在點擊的同一個事件裡呼叫，彈出視窗才不會被擋，所以呼叫前不能 await
-async function presentId() {
+// 有設定 One Tap，而且這次登記還沒被略過，就先用 One Tap
+const usesOneTap = () => Boolean(state.store?.hasOneTap) && !state.oneTapSkipped;
+
+function presentId() {
   if (IN_APP_BROWSER.test(navigator.userAgent)) {
     setRegisterPhase(
       'idle',
@@ -187,22 +195,48 @@ async function presentId() {
     );
     return;
   }
+  if (usesOneTap()) presentOneTap();
+  else presentPopup();
+}
+
+async function presentOneTap() {
+  setRegisterPhase('checking', '請在 Google 的帳號面板選擇帳號，櫃台查驗中……', { alternative: true });
+  try {
+    await state.store.signInWithOneTap();
+  } catch (e) {
+    if (e?.code === 'cancelled') return; // 改用彈出視窗了，或登記單已經關掉
+    if (e?.code === 'one-tap-skipped') {
+      state.oneTapSkipped = true;
+      if (els.register.open) setRegisterPhase('idle', 'Google 的帳號面板沒有出現，或被關掉了。再按一次會改用 Google 的登入視窗。');
+      return;
+    }
+    registerFailed(e);
+  }
+}
+
+// signInWithPopup 要在點擊的同一個事件裡呼叫，彈出視窗才不會被擋，所以呼叫前不能 await
+async function presentPopup() {
+  state.store.cancelOneTap?.();
   setRegisterPhase('checking', '請在 Google 的視窗選擇帳號，櫃台查驗中……');
   try {
     await state.store.signIn();
   } catch (e) {
-    if (!els.register.open) {
-      reportError(e);
-      return;
-    }
-    if (e?.code === 'cancelled') {
+    if (e?.code === 'cancelled' && els.register.open) {
       setRegisterPhase('idle', '沒關係，準備好再出示一次。');
       return;
     }
-    console.error(e);
-    const { title, body } = messageFor(e);
-    setRegisterPhase('idle', `${title}：${body}`);
+    registerFailed(e);
   }
+}
+
+function registerFailed(e) {
+  if (!els.register.open) {
+    reportError(e);
+    return;
+  }
+  console.error(e);
+  const { title, body } = messageFor(e);
+  setRegisterPhase('idle', `${title}：${body}`);
 }
 
 function approveRegister(user) {
@@ -221,6 +255,7 @@ function approveRegister(user) {
 
 function closedRegister() {
   const approved = els.register.dataset.phase === 'approved';
+  state.store.cancelOneTap?.();
   setRegisterPhase('idle');
   if (!approved || !state.user) return;
   // 剛印好的郵票貼到寫信桌上
@@ -278,6 +313,7 @@ function wireCompose() {
   els.toDrawer.addEventListener('click', saveCompose);
   els.lockedSignIn.addEventListener('click', openRegister);
   els.registerGo.addEventListener('click', presentId);
+  els.registerPopup.addEventListener('click', presentPopup);
   els.register.addEventListener('close', closedRegister);
   for (const radio of els.form.elements.stamp) {
     radio.checked = radio.value === state.stamp;
