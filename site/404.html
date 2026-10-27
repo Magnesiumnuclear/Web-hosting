@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>查無此址 · 街角郵局</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#b8341f">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23b8341f'/%3E%3C/svg%3E">
+  <!-- GitHub Pages 對任何不存在的網址都會送這一頁，網址可能在任何深度，所以樣式全部寫在這裡，不載入外部檔案 -->
+  <style>
+    :root {
+      --paper: #efe7d8; --card: #fbf7ef; --ink: #1c2230; --ink-soft: #5b606d;
+      --rule: #d3c9b6; --vermilion: #c23b26; --vermilion-ink: #a8301d; --indigo: #2c4a7a;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --paper: #15181f; --card: #232833; --ink: #ece5d7; --ink-soft: #a7a396; --rule: #3a4050; --vermilion: #d9533c; --vermilion-ink: #f07d66; --indigo: #8eaee0; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem 1rem;
+      background: var(--paper); color: var(--ink);
+      font: 400 1rem/1.7 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    }
+    .postcard {
+      position: relative; width: min(34rem, 100%); padding: 2rem 1.4rem 1.4rem; border: 7px solid transparent; border-radius: 3px;
+      background:
+        linear-gradient(var(--card), var(--card)) padding-box,
+        repeating-linear-gradient(135deg, var(--vermilion) 0 12px, var(--card) 12px 22px, var(--indigo) 22px 34px, var(--card) 34px 44px) border-box;
+      box-shadow: 0 14px 26px -16px rgb(0 0 0 / 0.5);
+      transform: rotate(-1.2deg);
+    }
+    .postcard::before {
+      content: "POST CARD · 明信片"; position: absolute; top: 0.5rem; left: 50%; translate: -50% 0;
+      font: 600 0.58rem/1 ui-monospace, monospace; letter-spacing: 0.32em; white-space: nowrap; color: var(--ink-soft); opacity: 0.7;
+    }
+    .stamp {
+      position: absolute; top: 1.6rem; right: 1.2rem; padding: 0.3rem 0.25rem 0.3rem 0.7rem; border: 3px double currentColor; border-radius: 4px;
+      color: var(--vermilion-ink); font: 900 1.1rem/1.2 "Noto Serif TC", "Songti TC", serif; letter-spacing: 0.45em; transform: rotate(9deg); opacity: 0.85;
+    }
+    h1 { margin: 0.8rem 0 0.4rem; font: 900 1.7rem/1.4 "Noto Serif TC", "Songti TC", serif; letter-spacing: 0.25em; }
+    p { margin: 0 0 0.8rem; color: var(--ink-soft); }
+    .lines { margin: 1.2rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); font-size: 0.85rem; }
+    .lines li { display: flex; gap: 0.8rem; padding: 0.45rem 0; border-bottom: 1px solid var(--rule); }
+    .lines b { flex: none; font-weight: 500; font-size: 0.72rem; letter-spacing: 0.12em; color: var(--ink-soft); }
+    .lines code { font: 500 0.82rem/1.6 ui-monospace, monospace; overflow-wrap: anywhere; }
+    .btn {
+      display: inline-block; margin-top: 1.2rem; padding: 0.7rem 1.1rem; border-radius: 2px; background: var(--ink); color: var(--paper);
+      font-weight: 700; letter-spacing: 0.08em; text-decoration: none;
+    }
+    .btn:focus-visible { outline: 2px solid var(--indigo); outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main class="postcard">
+    <span class="stamp" aria-hidden="true">查無此址</span>
+    <h1>退回寄件人</h1>
+    <p>這條街上沒有這個門牌，郵差找不到地方投遞。網址可能打錯了，或是這一頁已經搬走。</p>
+    <ul class="lines">
+      <li><b>收件地址</b><code id="where"></code></li>
+      <li><b>處理方式</b><span>退回街角郵局櫃台</span></li>
+    </ul>
+    <a class="btn" id="home" href="/">回到郵局</a>
+  </main>
+  <script>
+    document.getElementById('where').textContent = location.pathname;
+    // 專案網站的網址是 /<repo>/...，首頁就是第一段；帳號網站（<帳號>.github.io）首頁是 /
+    const parts = location.pathname.split('/');
+    document.getElementById('home').href = parts.length > 2 ? `/${parts[1]}/` : '/';
+  </script>
+</body>
+</html>

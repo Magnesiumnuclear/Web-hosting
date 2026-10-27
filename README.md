@@ -8,7 +8,7 @@
 - **權限**：全部寫在 [`firestore.rules`](firestore.rules)，前端沒有任何密鑰
 - **部署**：push 到 `main`，GitHub Actions 自動發布
 - **網站不需要 npm、不需要建置**：純 HTML / CSS / JavaScript，Firebase SDK 從 Google 官方 CDN 載入
-- **規則有自動測試**：`npm run test:rules` 在本機的 Firestore emulator 上跑 65 項測試（npm 只用在這裡）
+- **規則有自動測試**：`npm run test:rules` 在本機的 Firestore emulator 上跑 65 項規則測試，外加一次備份還原演練（npm 只用在這裡）
 
 還沒設定 Firebase 時，網站會以**示範模式**運作（資料只存在瀏覽器），可以先看介面。
 
@@ -138,7 +138,7 @@ npx firebase deploy --only firestore:rules --project <projectId>
 
 ## Security Rules 自動測試
 
-[`tests/firestore.rules.test.mjs`](tests/firestore.rules.test.mjs) 在本機的 Firestore emulator 上跑 65 項測試，用的是假專案 `demo-postoffice`，不需要登入，也不會連到你真的 Firebase 專案。
+[`tests/firestore.rules.test.mjs`](tests/firestore.rules.test.mjs) 在本機的 Firestore emulator 上跑 65 項測試，用的是假專案 `demo-postoffice`，不需要登入，也不會連到你真的 Firebase 專案。跑完規則測試後，[`tests/backup-restore.test.mjs`](tests/backup-restore.test.mjs) 會在同一個 emulator 上把備份腳本從頭到尾演練一次（見「備份與還原」）。
 
 需要 Node.js 20 以上、Java 21 以上（emulator 是 Java 程式）。
 
@@ -168,6 +168,42 @@ npm run test:rules
 放上 GitHub 後，[`.github/workflows/test-rules.yml`](.github/workflows/test-rules.yml) 會在 push 到 `main` 或開 PR、而且改到規則相關檔案（`firestore.rules`、`firebase.json`、`package*.json`、`tests/`、`site/js/shared.js`）時自動跑同一套測試，也可以在 Actions 分頁手動執行。它和部署是分開的，測試失敗不會擋住網站部署；Node 寫死在已修補 2026-10-21 安全更新的 22.23.4，emulator JAR 會快取，不用每次重新下載。
 
 部署到真的 Firebase 後，仍建議手動確認一次：登入、寄一張、放一封進抽屜再寄出、10 秒內連寄兩張（第二張應顯示「郵差還在路上」）。
+
+## 備份與還原
+
+Spark 方案不能用 Firestore 的官方匯出（要 Blaze），所以專案附了兩支用 Admin SDK 的腳本，把 `postcards`、`drawers/*/letters`、`rate` 倒成一個 JSON 檔，再寫回去。
+
+1. Firebase Console → 專案設定 → **服務帳戶** → **產生新的私密金鑰**，存成 `service-account.json` 放在專案資料夾（已在 `.gitignore`，**絕對不要進 git**，這把金鑰能繞過所有 Security Rules）。
+2. 備份：
+
+   ```bash
+   GOOGLE_APPLICATION_CREDENTIALS=service-account.json node scripts/firestore-backup.mjs
+   ```
+
+   檔案會存到 `backups/firestore-<時間>.json`（也在 `.gitignore`，裡面是使用者資料）。Windows 的 PowerShell 用 `$env:GOOGLE_APPLICATION_CREDENTIALS='service-account.json'` 先設定再跑。
+3. 還原：
+
+   ```bash
+   GOOGLE_APPLICATION_CREDENTIALS=service-account.json node scripts/firestore-restore.mjs backups/firestore-xxx.json
+   ```
+
+   預設只覆蓋備份裡有的文件；加 `--wipe` 會先清空三個集合再寫回（備份之後新增的也會被刪）。備份檔記著來源 `projectId`，寫進不同專案會先被擋下來。
+
+每次 `npm run test:rules` 都會在 emulator 上演練一次「塞資料 → 備份 → 清空 → 還原 → 比對」，確保腳本沒壞。真的專案建議上線後手動備份一次，並且試著還原到 emulator 看看：
+
+```bash
+npx firebase emulators:exec --only firestore --project demo-postoffice "node scripts/firestore-restore.mjs backups/firestore-xxx.json"
+```
+
+（還原到 emulator 前，要把備份檔裡的 `projectId` 改成 `demo-postoffice`。）
+
+讀取次數：備份會讀全部文件，每份算一次讀取，佔每日 5 萬次額度的一小部分。
+
+## 404 頁、分享預覽、郵局守則
+
+- [`site/404.html`](site/404.html)：GitHub Pages 對不存在的網址會送這一頁。它可能出現在任何深度的網址，所以樣式全部寫在檔案裡，不載入 `styles.css`。「回到郵局」的連結會自己判斷專案網站（`/<repo>/`）或帳號網站（`/`）。
+- 分享預覽：`index.html` 的 `og:*` 和 `twitter:*` 標籤讓連結貼到 X、LINE、Facebook 時有預覽卡，圖是 [`site/og.png`](site/og.png)（1200×630）。**`og:url` 和兩個圖片網址要換成你自己的網址**，不然預覽會抓到別人的圖。
+- 郵局守則：頁面底部說明收集了什麼（Google 名字、頭像、帳號識別碼、明信片）、什麼是公開的、怎麼撤回、使用約定，以及聯絡方式（GitHub Issues）。**連結裡的 repo 網址也要換成你的**。
 
 ## 共用電腦
 
@@ -208,9 +244,16 @@ firebase.json                       Firebase CLI 設定（規則檔位置、emul
 package.json、package-lock.json     規則測試用的套件（版本固定）
 tests/
   firestore.rules.test.mjs          規則的自動測試
-  run-rules-tests.mjs               啟動 emulator 跑測試，跑完關掉 emulator
+  backup-restore.test.mjs           在 emulator 上演練一次備份與還原
+  run-rules-tests.mjs               啟動 emulator 跑以上兩個測試，跑完關掉 emulator
+scripts/
+  firestore-backup.mjs              把三個集合倒成 JSON（需要服務帳戶金鑰）
+  firestore-restore.mjs             把 JSON 寫回 Firestore
+  firestore-admin.mjs               兩支腳本共用的連線與 Timestamp 轉換
 site/
-  index.html                        頁面
+  index.html                        頁面（含分享預覽的 meta 標籤、郵局守則）
+  404.html                          查無此址：GitHub Pages 的 404 頁，樣式內嵌
+  og.png                            分享到社群時的預覽圖（1200×630）
   styles.css                        樣式（自動跟隨系統的深色模式）
   firebase-config.js                預設 null＝示範模式；部署時被覆寫
   js/app.js                         畫面與互動
@@ -244,4 +287,4 @@ site/
 - Google Identity Services 從 `https://accounts.google.com/gsi/client` 載入，Google 不提供固定版本
 - `actions/checkout` v7.0.1、`actions/upload-pages-artifact` v5.0.0、`actions/deploy-pages` v5.0.1；規則測試另用 `actions/setup-node` v7.1.0、`actions/setup-java` v6.1.0、`actions/cache` v6.1.0（全部釘在 commit SHA）
 - CI 的 Node 22.23.4、Java Temurin 21
-- 規則測試：`firebase-tools` 15.34.0、`@firebase/rules-unit-testing` 5.0.2、`firebase` 12.19.0。rules-unit-testing 6.x 需要 Node 24.12 以上並搭配 firebase 13，所以停在 5.0.2；lockfile 只收發布滿 7 天的版本。
+- 規則測試：`firebase-tools` 15.34.0、`@firebase/rules-unit-testing` 5.0.2、`firebase` 12.19.0；備份腳本：`firebase-admin` 14.5.0。rules-unit-testing 6.x 需要 Node 24.12 以上並搭配 firebase 13，所以停在 5.0.2；lockfile 只收發布滿 7 天的版本。

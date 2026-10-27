@@ -30,7 +30,8 @@ const result = spawnSync(
     '--project',
     PROJECT,
     '--non-interactive',
-    'node --test tests/firestore.rules.test.mjs',
+    // 兩個檔案依序跑：備份測試會清空 emulator，不能和規則測試同時進行
+    'node --test tests/firestore.rules.test.mjs && node --test tests/backup-restore.test.mjs',
   ],
   { cwd: root, stdio: 'inherit' },
 );

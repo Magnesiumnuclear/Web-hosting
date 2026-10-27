@@ -11,6 +11,7 @@ on:
       - package.json
       - package-lock.json
       - 'tests/**'
+      - 'scripts/**'
       - site/js/shared.js
       - .github/workflows/test-rules.yml
   pull_request:
@@ -20,6 +21,7 @@ on:
       - package.json
       - package-lock.json
       - 'tests/**'
+      - 'scripts/**'
       - site/js/shared.js
       - .github/workflows/test-rules.yml
   workflow_dispatch:

@@ -12,3 +12,7 @@ firestore-debug.log
 node_modules/
 .DS_Store
 Thumbs.db
+
+# Firestore 備份檔（內含使用者資料）與服務帳戶金鑰，不進 git
+backups/
+service-account*.json

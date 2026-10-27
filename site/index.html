@@ -6,6 +6,21 @@
   <title>街角郵局</title>
   <meta name="description" content="寄一張明信片給路過的人。GitHub Pages ＋ Firebase（Firestore、Google 登入）的免費架站範例。">
   <meta name="theme-color" content="#b8341f">
+  <!-- 分享到 X、LINE、Facebook 時的預覽卡。換成自己的網址；og.png 是 1200×630 的分享圖 -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="街角郵局">
+  <meta property="og:title" content="街角郵局">
+  <meta property="og:description" content="寄一張明信片給路過的人。">
+  <meta property="og:url" content="https://magnesiumnuclear.github.io/Web-hosting/">
+  <meta property="og:image" content="https://magnesiumnuclear.github.io/Web-hosting/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="街角郵局：一張貼著郵票、蓋了郵戳的明信片">
+  <meta property="og:locale" content="zh_TW">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="街角郵局">
+  <meta name="twitter:description" content="寄一張明信片給路過的人。">
+  <meta name="twitter:image" content="https://magnesiumnuclear.github.io/Web-hosting/og.png">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -132,8 +147,34 @@
         </ol>
       </section>
 
+      <section class="privacy" id="privacy" aria-labelledby="privacy-title">
+        <h2 class="section-title" id="privacy-title">郵局守則</h2>
+        <dl class="privacy__list">
+          <div>
+            <dt>郵局會留下什麼</dt>
+            <dd>登記寄件人時，郵局向 Google 取得你的名字、頭像網址和一組帳號識別碼，連同你寫的明信片一起存在 Cloud Firestore（Google 的資料庫，位於台灣）。郵局不收集電子郵件地址，沒有 cookie 追蹤，也沒有任何統計或廣告服務。</dd>
+          </div>
+          <div>
+            <dt>誰看得到</dt>
+            <dd>貼上公佈牆的明信片是<strong>公開的</strong>：內容、你的名字和頭像，所有打開這個網站的人都看得到，包括沒登入的人。抽屜裡的信只有你本人讀得到。</dd>
+          </div>
+          <div>
+            <dt>怎麼收回</dt>
+            <dd>公佈牆上的明信片可以隨時撤回，抽屜裡的信可以丟掉，撤回後就從資料庫刪除。想連登記資料一起清掉，請用下面的方式聯絡郵局。在共用電腦上請用無痕視窗，登出後瀏覽器仍可能留著讀過的資料。</dd>
+          </div>
+          <div>
+            <dt>使用約定</dt>
+            <dd>明信片請寫給路過的人看得下去的內容：不要騷擾、不要仇恨言論、不要貼別人的個資或版權內容、不要廣告。違反的明信片會被撤下；屢犯的寄件人會被拒收。郵局是個人的免費範例專案，不保證永久營業，也不對內容遺失負責。</dd>
+          </div>
+          <div>
+            <dt>聯絡郵局</dt>
+            <dd>有問題、想檢舉明信片，或想刪除資料，請到 <a href="https://github.com/Magnesiumnuclear/Web-hosting/issues" rel="noopener">GitHub 的 Issues</a> 留言。</dd>
+          </div>
+        </dl>
+      </section>
+
       <footer class="colophon">
-        <p>街角郵局是 GitHub Pages ＋ Firebase Spark（免費方案）的範例專案。牆上只顯示最新 40 張。</p>
+        <p>街角郵局是 GitHub Pages ＋ Firebase Spark（免費方案）的範例專案，<a href="https://github.com/Magnesiumnuclear/Web-hosting" rel="noopener">原始碼在 GitHub</a>。牆上只顯示最新 40 張。</p>
       </footer>
     </main>
   </div>

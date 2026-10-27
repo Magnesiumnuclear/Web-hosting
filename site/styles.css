@@ -1047,6 +1047,39 @@ body {
   margin: 0;
 }
 
+/* ── 郵局守則（隱私與使用約定） ─────────────────────── */
+
+.privacy {
+  margin-top: 3.2rem;
+}
+
+.privacy__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1.2rem 2rem;
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.75;
+}
+
+.privacy__list dt {
+  margin-bottom: 0.25rem;
+  font: 700 0.95rem/1.4 var(--font-serif);
+  letter-spacing: 0.1em;
+}
+
+.privacy__list dd {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.privacy a,
+.colophon a {
+  color: var(--ink);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
 .noscript {
   position: fixed;
   inset: auto 1rem 1rem;
