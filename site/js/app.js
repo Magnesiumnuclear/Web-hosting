@@ -206,8 +206,10 @@ async function presentOneTap() {
   } catch (e) {
     if (e?.code === 'cancelled') return; // 改用彈出視窗了，或登記單已經關掉
     if (e?.code === 'one-tap-skipped') {
+      // 瀏覽器裡沒有登入中的 Google 帳號（例如訪客模式、無痕視窗），或面板被關掉、在冷卻期：
+      // 面板會立刻回報略過，這時還在同一次點擊的使用者操作期限內，直接改開登入視窗，不用再按一次
       state.oneTapSkipped = true;
-      if (els.register.open) setRegisterPhase('idle', 'Google 的帳號面板沒有出現，或被關掉了。再按一次會改用 Google 的登入視窗。');
+      if (els.register.open) presentPopup('Google 的帳號面板沒有出現，改開 Google 的登入視窗，請在視窗裡選擇帳號……');
       return;
     }
     registerFailed(e);
@@ -215,9 +217,9 @@ async function presentOneTap() {
 }
 
 // signInWithPopup 要在點擊的同一個事件裡呼叫，彈出視窗才不會被擋，所以呼叫前不能 await
-async function presentPopup() {
+async function presentPopup(status = '請在 Google 的視窗選擇帳號，櫃台查驗中……') {
   state.store.cancelOneTap?.();
-  setRegisterPhase('checking', '請在 Google 的視窗選擇帳號，櫃台查驗中……');
+  setRegisterPhase('checking', status);
   try {
     await state.store.signIn();
   } catch (e) {
@@ -313,7 +315,7 @@ function wireCompose() {
   els.toDrawer.addEventListener('click', saveCompose);
   els.lockedSignIn.addEventListener('click', openRegister);
   els.registerGo.addEventListener('click', presentId);
-  els.registerPopup.addEventListener('click', presentPopup);
+  els.registerPopup.addEventListener('click', () => presentPopup());
   els.register.addEventListener('close', closedRegister);
   for (const radio of els.form.elements.stamp) {
     radio.checked = radio.value === state.stamp;

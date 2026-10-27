@@ -97,7 +97,7 @@ Firebase 的 `apiKey` 是公開的識別碼，不是密碼，放在網站上是�
 
 ## 5. 選用：Google One Tap 登入
 
-預設登入會開 Google 的彈出視窗，手機上會切到 `accounts.google.com` 的分頁。設定 One Tap 後，支援 FedCM 的瀏覽器（例如 Android 的 Chrome）改成從畫面下方滑出系統的帳號面板，不用離開網站；面板沒出現或被關掉時，登記單會改用原本的彈出視窗。iPhone 和其他瀏覽器照舊用彈出視窗。
+預設登入會開 Google 的彈出視窗，手機上會切到 `accounts.google.com` 的分頁。設定 One Tap 後，支援 FedCM 的瀏覽器（例如 Android 的 Chrome）改成從畫面下方滑出系統的帳號面板，不用離開網站；面板沒出現或被關掉時（瀏覽器裡沒有登入中的 Google 帳號、訪客或無痕模式、之前關過面板的冷卻期），登記單會在同一次點擊裡自動改開原本的彈出視窗。iPhone 和其他瀏覽器照舊用彈出視窗。
 
 1. Firebase Console → **Authentication → Sign-in method → Google** → 展開 **網頁 SDK 設定**，複製 **網頁用戶端 ID**（像 `123…-xxx.apps.googleusercontent.com`）。
 2. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → 選同一個專案 → 憑證 → **OAuth 2.0 用戶端 ID** 裡的 **Web client (auto created by Google Service)** → **已授權的 JavaScript 來源** 加入 `https://<你的帳號>.github.io`（本機測試再加 `http://localhost` 和 `http://localhost:8000`）→ 儲存。生效可能要幾分鐘。
